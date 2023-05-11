@@ -48,6 +48,7 @@ pub fn ffprobe_config(
         "-show_streams",
         "-print_format",
         "json",
+        "-count_packets",
     ]);
 
     if config.count_frames {
@@ -153,6 +154,43 @@ pub struct FfProbe {
     pub format: Format,
 }
 
+impl FfProbe {
+    pub fn get_number_of_frames(&self) -> Option<usize> {
+        let v_stream = self
+            .streams
+            .iter()
+            .find(|s| s.codec_type == Some("video".to_string()));
+        if let Some(stream) = v_stream {
+            let nb_frames = stream
+                .nb_frames
+                .as_ref()
+                .or(stream.nb_read_frames.as_ref())
+                .or(stream.nb_read_packets.as_ref());
+            if let Some(s) = nb_frames {
+                serde_json::from_str(&s).ok()
+            } else {
+                None
+            }
+        } else {
+            None
+        }
+    }
+
+    pub fn get_format_names(&self) -> Vec<String> {
+        self.format
+            .format_name
+            .split(',')
+            .map(|s| s.to_string())
+            .collect::<Vec<String>>()
+    }
+
+    pub fn get_video_stream(&self) -> Option<&Stream> {
+        self.streams
+            .iter()
+            .find(|s| s.codec_type.as_ref().map(|s| s.to_lowercase()) == Some("video".to_string()))
+    }
+}
+
 #[derive(Default, Debug, Clone, PartialEq, serde::Serialize, serde::Deserialize)]
 #[cfg_attr(feature = "__internal_deny_unknown_fields", serde(deny_unknown_fields))]
 pub struct Stream {
@@ -170,6 +208,7 @@ pub struct Stream {
     /// Requires full decoding and is only available if the 'count_frames'
     /// setting was enabled.
     pub nb_read_frames: Option<String>,
+    pub nb_read_packets: Option<String>,
     pub codec_long_name: Option<String>,
     pub codec_type: Option<String>,
     pub codec_time_base: Option<String>,
