@@ -189,6 +189,13 @@ impl FfProbe {
             .iter()
             .find(|s| s.codec_type.as_ref().map(|s| s.to_lowercase()) == Some("video".to_string()))
     }
+
+    pub fn get_duration(&self) -> Option<f64> {
+        self.format
+            .duration
+            .as_ref()
+            .map(|duration| duration.parse::<f64>().unwrap_or_default())
+    }
 }
 
 #[derive(Default, Debug, Clone, PartialEq, serde::Serialize, serde::Deserialize)]
